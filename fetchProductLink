@@ -1,0 +1,392 @@
+
+async function productLink() {
+  try {
+    
+  
+    var lastUrl = await nextUrlForProduct()
+    var nextpage = lastUrl.pgno;
+    let currentURL = lastUrl.nextURL;
+
+
+    if (currentURL == "") {
+      Logger.log("next page is finished now visiting to next link of category link product ")
+      await productLinkInitiate()
+      return
+    }
+
+    if (currentURL) {
+      while (currentURL != "") {
+
+        await fetchproductLink(currentURL, nextpage);
+        nextPageobj = await nextUrlForProduct()
+        nextpage = nextPageobj.pgno
+        currentURL = nextPageobj.nextURL
+        Logger.log("current0-->"+ currentURL)
+        
+        // if (currentURL == "") {
+        //     await productLinkInitiate()
+        //   return
+        // }
+      }
+     
+    }
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+}
+
+//##############################################################################################
+
+
+async function productLinkInitiate() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('categoryLinkSheet')
+
+    var lastUrl = await nextUrl()
+    let currentURL = lastUrl.nextURL;
+
+    // ###################################
+    if (!currentURL || currentURL == "") {
+      Logger.log("every link in category link sheet is visited")
+      return
+    }
+
+    let celvalue = lastUrl.nextCellValue + 1
+    let url = "A" + celvalue.toString()
+
+    let currentState = {
+      nextCellValue: lastUrl.nextCellValue + 1,
+      nextURL: sheet.getRange(url).getValue(),
+      time: (new Date()).toString()
+    };
+
+    await saveUrlforTrigger(currentState);
+
+    await productLinktrigger(currentURL)
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+
+}
+
+
+
+
+
+async function productLinktrigger(url) {
+  try {
+
+
+    let currentState = {
+      pgno: 1,
+      nextURL: url,
+      time: (new Date()).toString()
+    };
+    await saveUrlforTriggerForProduct(currentState)
+
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+
+}
+
+
+
+
+
+//###############################################################################################
+async function fetchproductLink(url, nextpage) {
+  try {
+
+
+    htmlSelector = "#container > div > div._36fx1h._6t1WkM._3HqJxg > div > div:nth-child(2)"
+    htmltag = "a[class = _2rpwqI]"
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('productlink');
+    var response = UrlFetchApp.fetch(url);
+    var rsponsehtml = response.getContentText();
+    var selector = Cheerio.load(rsponsehtml);
+
+    var productLink = []  //_1LKTO3  //https://script.google.com/home/projects/15A3jPg3RNFDl6H8VqPxnssaQ_wB6F6u2U5jMALbOxJJiYF81CX0t-Umi/edit
+//_2UzuFa
+    
+
+    // await selector("#container > div > div._36fx1h._6t1WkM._3HqJxg > div > div:nth-child(2)").find("a[class = _2rpwqI]").each(function (i, elelemt) {
+
+
+    //   var link = selector(this).attr("href");
+    //   if (link) {
+    //     if (link.indexOf("https://www.flipkart.com") == -1) {
+    //       link = "https://www.flipkart.com" + link
+    //     }
+
+
+    //     if (!productLink.find(element => element == link)) {
+    //       productLink.push(link)
+    //     }
+
+    //   }
+
+
+
+    // })
+
+    // fashion
+
+    
+    await selector("#container > div > div._36fx1h._6t1WkM._3HqJxg > div > div:nth-child(2)").find("a[class = _2UzuFa]").each(function (i, elelemt) {
+
+
+      var link = selector(this).attr("href");
+      if (link) {
+        if (link.indexOf("https://www.flipkart.com") == -1) {
+          link = "https://www.flipkart.com" + link
+        }
+
+
+        if (!productLink.find(element => element == link)) {
+          productLink.push(link)
+        }
+
+      }
+
+
+
+    })
+
+    // Logger.log("productlink-------------------------->"+productLink)
+
+    // productLink.map(async(url, i) => {
+    //   var arr = [[]]
+    //   arr[0].push(url)
+    //   Logger.log("writing in sheet===========================")
+
+    //   await writeJSONToSheets(sheet, arr)
+     
+
+
+    // })
+    //#container > div > div._36fx1h._6t1WkM._3HqJxg > div > div:nth-child(2) > div:nth-child(12) > div > div > nav > a._1LKTO3
+    var nextPageLink = ""
+
+    let boo = true
+
+    await selector("#container > div > div._36fx1h._6t1WkM._3HqJxg > div > div:nth-child(2)").find("a[class = _1LKTO3]").each(async function (i, elelemt) {
+
+      boo = false
+
+      let val = selector(elelemt).text()
+      Logger.log("nextpagelink---->"+val)
+      if (val == "Next") {
+        Logger.log("next---->" + val)
+
+
+        var linkkk = selector(elelemt).attr("href")
+
+        if (linkkk.indexOf("https://www.flipkart.com") == -1) {
+          linkkk = "https://www.flipkart.com" + linkkk
+          nextPageLink = linkkk
+        } else {
+          nextPageLink = linkkk
+        }
+        Logger.log("nextPage------------------------------------------------------------------->")
+
+        Logger.log("nextPagelink-------->" + nextPageLink)
+
+
+
+        let currentState = {
+          pgno: nextpage + 1,
+          nextURL: nextPageLink,
+          time: (new Date()).toString()
+        };
+
+
+
+        await saveUrlforTriggerForProduct(currentState);
+
+      }
+      else {
+        Logger.log("page  end-------------------")
+        let currentState = {
+          pgno: nextpage + 1,
+          nextURL: "",
+          time: (new Date()).toString()
+        };
+
+
+        await saveUrlforTriggerForProduct(currentState);
+
+        // return
+      }
+
+
+    })
+
+    if (boo) {
+
+      Logger.log("one page only")
+      let currentState = {
+        pgno: nextpage + 1,
+        nextURL: "",
+        time: (new Date()).toString()
+      };
+
+
+      await saveUrlforTriggerForProduct(currentState);
+
+    }
+
+
+     Logger.log("productlink-------------------------->"+productLink)
+
+    productLink.map(async(url, i) => {
+      var arr = [[]]
+      arr[0].push(url)
+      Logger.log("writing in sheet===========================")
+
+      await writeJSONToSheets(sheet, arr)
+     
+
+
+    })
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+
+}
+
+//#######################################################################################################################
+
+async function clear() {
+  try {
+    var id = "1MjMHqTHA5qMnf9LcpWMDr8lRupSnHGoSixGg4GeQAp4"
+
+    var doc = DocumentApp.openById(id);
+    await doc.clear();
+
+    // await doc.saveAndClose()
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+}
+
+async function wait() {
+  try {
+    var id = "1MjMHqTHA5qMnf9LcpWMDr8lRupSnHGoSixGg4GeQAp4"
+
+    var doc = DocumentApp.openById(id);
+
+    Logger.log("wait------------->")
+    // Utilities.sleep(1000);
+
+    // await doc.saveAndClose()
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+}
+
+//###############################################################################################
+
+async function saveUrlforTriggerForProduct(currentUrlObj) {
+  try {
+    var id = "1MjMHqTHA5qMnf9LcpWMDr8lRupSnHGoSixGg4GeQAp4"
+    Logger.log("pgno in saving" + currentUrlObj.pgno)
+    await clear()
+    var doc = DocumentApp.openById(id);
+
+    await doc.setText(await JSON.stringify(currentUrlObj));
+    await doc.saveAndClose()
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+
+}
+
+
+async function nextUrlForProduct() {
+  try {
+    var id = "1MjMHqTHA5qMnf9LcpWMDr8lRupSnHGoSixGg4GeQAp4"
+
+
+    await wait();
+      //  Utilities.sleep(1000);
+
+    var doc = DocumentApp.openById(id);
+    var textContent = await doc.getText();
+    Logger.log("textcontent---->" + textContent)
+    var data = await JSON.parse(textContent);
+    Logger.log("pgno in coming" + data.pgno)
+    Logger.log("url is coming----->" + data.nextURL)
+
+    return data
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+}
+
+ // ##################################################################################################
+
+function writeJSONToSheets(sheet,dataSet) {
+
+  Logger.log("writing=================================")
+
+  var numRows = sheet.getLastRow();
+  sheet.getRange(numRows + 1, 1, dataSet.length, dataSet[0].length).setValues(dataSet);
+
+  //sheet.getRange(a,b,c,d) a- to which row it start, b - to which coloumn it start, c - how many row it want,d- how many column it want
+
+}
+
+//#######################################################################################################
+
+async function clearData() {
+  try {
+    var id = "1bUP1SJVd5uaAEtFQWtFHNoatOnHivWSPsUCiI0E-rcE"
+
+    var doc = DocumentApp.openById(id);
+    await doc.clear();
+
+    // await doc.saveAndClose()
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+}
+
+
+async function saveUrlforTriggerForProductData(currentUrlObj) {
+  try {
+
+    var id = "1bUP1SJVd5uaAEtFQWtFHNoatOnHivWSPsUCiI0E-rcE"
+    Logger.log("pgno in saving" + currentUrlObj.pgno)
+    await clearData()
+    var doc = DocumentApp.openById(id);
+
+    await doc.setText(await JSON.stringify(currentUrlObj));
+    await doc.saveAndClose()
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+
+}
