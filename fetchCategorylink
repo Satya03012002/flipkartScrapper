@@ -1,0 +1,237 @@
+
+async function uniBot() {
+  try {
+
+    var url = "https://www.flipkart.com/";
+
+    await categorylink(url)
+
+
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+}
+
+
+async function categorylink(url) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('categoryLinkSheet')
+
+    var htmlcategorySelector = userInput()
+    var htmlcategorytag = "a"
+
+  
+    var numRows = sheet.getLastRow();
+    await fetchCategoryLink(url, htmlcategorySelector, htmlcategorytag)
+    initiateafter(numRows)
+
+    //productLink() //////////////////////////////////////////check here
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+
+}
+
+
+function fetchCategoryLink(url, htmlSelector, htmltag) {
+
+  Logger.log(url)
+
+  // url = "https://www.flipkart.com/india-ka-furniture-studio-store?fm=neo%2Fmerchandising&iid=M_2a44bd8f-43f8-478c-93e4-e8655c6ffa4b_1_372UD5BXDFYS_MC.Q6I8NGK1VUG9&otracker=hp_rich_navigation_1_1.navigationCard.RICH_NAVIGATION_Home~Home%2BFurnishings_Q6I8NGK1VUG9&otracker1=hp_rich_navigation_PINNED_neo%2Fmerchandising_NA_NAV_EXPANDABLE_navigationCard_cc_1_L1_view-all&cid=Q6I8NGK1VUG9"
+
+  url = "https://www.flipkart.com/television-store?otracker=nmenu_sub_TVs%20and%20Appliances_0_Televisions&otracker=nmenu_sub_TVs%20%26%20Appliances_0_Television&otracker=nmenu_sub_TVs%20%26%20Appliances_0_Television&otracker=nmenu_sub_TVs%20%26%20Appliances_0_Television"
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('categoryLinkSheet');
+  var response = UrlFetchApp.fetch(url);
+  var rsponsehtml = response.getContentText();
+  var selector = Cheerio.load(rsponsehtml);
+
+  var catagoryLink = []
+
+  selector(htmlSelector).find(htmltag).each(function (i, elelemt) {
+    var link = selector(this).attr("href");
+
+    Logger.log(link)
+    
+
+    if (link) {
+      if (link.indexOf("https://www.flipkart.com") == -1) {
+        link = "https://www.flipkart.com" + link
+      }
+      catagoryLink.push(link);
+
+    }
+  })
+
+    Logger.log(catagoryLink)
+
+  catagoryLink.map((url, i) => {
+    var arr = [[]]
+    arr[0].push(url)
+    Logger.log(arr)
+
+    writeJSONToSheets(sheet, arr)
+
+  })
+
+  return catagoryLink
+
+
+}
+
+
+//#################################################################################################################
+
+//1MjMHqTHA5qMnf9LcpWMDr8lRupSnHGoSixGg4GeQAp4
+async function saveUrlforTrigger(currentUrlObj) {
+  try {
+    var id = "1jie9n1N3wPPFHAYb12A5dAm3kcpqjs2udXr5Im-bM48"
+    var doc = DocumentApp.openById(id);
+    //  await clear()
+    await doc.clear();
+    await doc.setText(await JSON.stringify(currentUrlObj));
+    await doc.saveAndClose()
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+}
+
+async function nextUrl() {
+  try {
+    var id = "1jie9n1N3wPPFHAYb12A5dAm3kcpqjs2udXr5Im-bM48"
+    var doc = DocumentApp.openById(id);
+    var textContent = await doc.getText();
+    var data = JSON.parse(textContent);
+
+    return data
+
+  } catch (err) {
+    Logger.log(err)
+  }
+
+}
+
+
+async function clear() {
+  try {
+    var id = "1MjMHqTHA5qMnf9LcpWMDr8lRupSnHGoSixGg4GeQAp4"
+
+    var doc = DocumentApp.openById(id);
+    await doc.clear();
+
+    await doc.saveAndClose()
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+}
+
+async function saveUrlforTriggerForProduct(currentUrlObj) {
+  try {
+    var id = "1MjMHqTHA5qMnf9LcpWMDr8lRupSnHGoSixGg4GeQAp4"
+    Logger.log("pgno in saving" + currentUrlObj.pgno)
+    await clear()
+    var doc = DocumentApp.openById(id);
+
+    await doc.setText(await JSON.stringify(currentUrlObj));
+    await doc.saveAndClose()
+  } catch (err) {
+    Logger.log(err)
+  }
+
+}
+
+
+
+// ###########################################################################################
+
+function userInput() {
+
+  var htmlcategorySelector = Browser.inputBox(" write  copy selector of div in flipkart main page");
+
+  return htmlcategorySelector
+}
+
+
+
+function writeJSONToSheets(sheet, dataSet) {
+
+  var numRows = sheet.getLastRow();
+  sheet.getRange(numRows + 1, 1, dataSet.length, dataSet[0].length).setValues(dataSet);
+
+  //sheet.getRange(a,b,c,d) a- to which row it start, b - to which coloumn it start, c - how many row it want,d- how many column it want
+
+}
+
+
+//############################################################################################
+
+async function initiatebefore() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('categoryLinkSheet')
+    let = numRows = sheet.getLastRow()
+
+    return numRows
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+
+
+}
+
+async function customInitiate(){
+   initiateafter(0)
+}
+
+async function initiateafter(numRows) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('categoryLinkSheet')
+
+    if (numRows == 0) {
+      Logger.log("numRows================"+numRows)
+      
+      let currentState = {
+        nextCellValue: 2,  // PAHLE 1 THA
+        nextURL: sheet.getRange("A1").getValue(),
+        time: (new Date()).toString()
+      };
+      let currentStatelink = {
+        pgno: 1,
+        nextURL: sheet.getRange("A1").getValue(),
+        time: (new Date()).toString()
+      };
+      await saveUrlforTrigger(currentState);
+      await saveUrlforTriggerForProduct(currentStatelink)
+
+    } else {
+      Logger.log("numRows================"+numRows)
+      
+      let url = "A" + numRows.toString()
+      let currentState = {
+        nextCellValue: numRows + 1,
+        nextURL: sheet.getRange(url).getValue(),
+        time: (new Date()).toString()
+      };
+      await saveUrlforTrigger(currentState);
+
+    }
+  } catch (err) {
+    Logger.log(err)
+  }
+
+
+
+}
