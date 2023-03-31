@@ -1,0 +1,210 @@
+async function getImageUrls() {
+ var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('productlink')
+
+var columnC = sheet.getRange("C:C").getValues(); // Get values of column C
+  var startRow = columnC.filter(String).length; // Count non-empty cells in column C
+  Logger.log("Last row with data in column C: " + startRow);
+    //   var lastRowC = sheet.getRange("C:C").getLastRow();
+    //  Logger.log("Last row of column C: " + lastRowC);
+  // var startRow = 331; // Start row of the range
+  var endRow = 17182//8874; // End row of the range
+  var column = 1; 
+  var col = 4
+  // Column C
+  var urls = []; // Array to store the URLs
+  
+  for (var row = startRow; row <= endRow; row++) {
+    var image = sheet.getRange(row, column).getValues()
+    Logger.log(image[0][0])
+    await fetchproductData(image[0][0], row)
+    // Logger.log("link-----++++"+ link)
+    
+    // sheet.getRange(row, col).setValue(link)
+  }
+  
+  // Do something with the urls array
+}
+
+
+async function fetchproductData(url,row) {
+
+  // 1. General information
+
+  var response = UrlFetchApp.fetch(url);
+  var rsponsehtml = response.getContentText();
+  var selector = Cheerio.load(rsponsehtml);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Productlink');
+
+  Logger.log("hello")
+  // 1. General information
+
+  var Product = {}
+
+  var link = url;
+
+  var productId = link.slice(link.indexOf("/p/") + 3, link.indexOf("?"))
+  Product['productId'] = productId
+   
+
+  var title = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(2) > div > div:nth-child(1) > h1 > span")
+  Product["title"] = title.text()
+
+
+
+ 
+  var imageUrl = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-5-12._78xt5Y > div:nth-child(1) > div > div._3li7GG > div._1BweB8 > div._3kidJX > div.CXW8mj._3nMexc > img")
+Logger.log("dd")
+
+  let imageurlval = imageUrl.attr("src")
+  
+  if(!imageurlval){
+  let x = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-5-12._78xt5Y > div:nth-child(1) > div > div._3li7GG > div._1BweB8._2S1qQy > div._3kidJX > div._3ywSr_ > div > img")
+  Logger.log("nn"+x.attr("src"))
+  imageurlval = x.attr("src")
+  }
+
+   if(imageurlval){
+    Logger.log("image val url"+imageurlval)
+ let val =  await storeImageInDrive(imageurlval)
+
+   Product['imageUrl'] = val
+   }
+
+  // Product['imageUrl'] = imageUrl.attr("src") //UrlFetchApp.fetch(imageurlval).getBlob();
+
+    Logger.log("he;;o")
+
+  var categoryPaths = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(1) > div:nth-child(1) > div")
+
+  var categoryPathsList = []
+  var str = ""
+
+  categoryPaths.find("a").each((i, currentElement) => {
+    str += selector(currentElement).html() + ",  "
+
+    categoryPathsList.push(selector(currentElement).html())
+  })
+
+  Product['categoryPaths'] = str
+  var price = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(2) > div > div.dyC4hf > div.CEmiEU > div > div._30jeq3._16Jk6d")
+
+  Product['price'] = price.html()
+
+  var mrp = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(2) > div > div.dyC4hf > div.CEmiEU > div > div._3I9_wc._2p6lqe")
+  mrp = mrp = mrp.html()
+  Product['mrp'] = mrp
+  Product['productUrl'] = url
+
+  var productDescription = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div._1YokD2._3Mn1Gg > div:nth-child(3) > div._3nkT-2 > div._2o-xpa")
+  Product['productDescription'] = productDescription.text()
+
+  var productBrand = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(2) > div > div:nth-child(1) > h1 > span")
+  productBrand = productBrand.text().slice(0, productBrand.text().indexOf(" "))
+  Product['productBrand'] = productBrand
+
+  var productShippingBaseInfo = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(6) > div > div > div._1SLzzw > div._1OUluu > ul > div > div")
+
+  var inStock = true
+  if (productShippingBaseInfo.text()) {
+    productShippingBaseInfo = productShippingBaseInfo.text()
+  } else {
+    productShippingBaseInfo = "OUT OF STOCK"
+    inStock = false
+  }
+    Logger.log("he;;o")
+  Product['productShippingBaseInfo'] = productShippingBaseInfo
+
+
+  Product['inStock'] = inStock
+  Product['isAvailable'] = inStock
+
+  var codAvailable = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(7) > div:nth-child(2) > div > div._250Jnj > ul > li:nth-child(2)")
+
+  Product['codAvailable'] = codAvailable.text()
+
+  var emiAvailable = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(7) > div:nth-child(2) > div > div._250Jnj > ul > li:nth-child(1)")
+  Product['emiAvailable'] = emiAvailable.text()
+
+
+  var offerList = []
+  var offer = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(3) > div._3TT44I > div > div")
+
+  var text = ""
+  var str = ""
+  offer.find("span").each((i, l) => {
+
+    selector(l).find("span").each((i, j) => {
+
+
+      text += selector(j).html()
+    })
+    str += text + ",  "
+    offerList.push(str)
+    text = ""
+  })
+  Product['offers'] = str
+  var discount = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(2) > div > div.dyC4hf > div.CEmiEU > div > div._3Ay6Sb._31Dcoz")
+
+  Product['discount'] = discount.text()
+
+  var rating = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(2) > div > div:nth-child(2) > div > div").find("._3LWZlK")
+
+  Product["rating"] = rating.text()
+
+
+  var titleText = selector("#container > div > div._2c7YLP.UtUXW0._6t1WkM._3HqJxg > div._1YokD2._2GoDe3 > div._1YokD2._3Mn1Gg.col-8-12 > div:nth-child(2) > div > div:nth-child(1) > h1 > span")
+
+
+
+  var rows = [[Product["productId"], Product["title"], Product["imageUrl"], Product["categoryPaths"], Product["mrp"], Product["price"], Product["productDescription"], Product["productBrand"], Product["inStock"], Product["isAvailable"], Product["codAvailable"], Product["emiAvailable"], Product["offers"], Product["discount"], Product["rating"]]]
+
+     Logger.log("he;;o")
+ 
+  writeJSONToSheetss(sheet, rows, row)
+
+
+
+
+
+
+
+}
+
+
+function storeImageInDrive(url) {
+  var response = UrlFetchApp.fetch(url);
+  var id = "1aKAGJLFjwwbZoEK9WeAvaSUw9WZwsman"
+
+  var folder = DriveApp.getFolderById(id);
+
+
+
+   
+  var imageblob = response.getBlob();
+  let data =folder.createFile(imageblob);
+  
+   var url = data.getUrl()
+
+  Logger.log("link------->"+url)
+  return url;
+}
+
+
+
+
+function writeJSONToSheetss(sheet, dataSet, row) {
+
+  // var numRows = sheet.getLastRow();
+  sheet.getRange(row, 2, dataSet.length, dataSet[0].length).setValues(dataSet);
+ 
+  Logger.log("imageurl ----->"+ dataSet[0][2])
+
+
+   
+    
+
+  //sheet.getRange(a,b,c,d) a- to which row it start, b - to which coloumn it start, c - how many row it want,d- how many column it want
+
+}
